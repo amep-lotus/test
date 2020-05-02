@@ -1,0 +1,25 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: cibuilds/hugo:latest
+    working_directory: ~/mysite
+    environment: 
+        HUGO_BUILD_DIR: ~/mysite/public
+    steps:
+      
+      # build with Hugo      
+      - run:
+          name: "Run Hugo"
+          command: HUGO_ENV=production hugo -v -d ~/mysite/public
+
+      #test
+      - run: docker run -d -p 1313:1313 --name hugotest -v $(pwd)/:/usr/src/blog cibuilds/hugo:latest hugo server --baseUrl=http://localhost/ --watch --bind=0.0.0.0; sleep 10 
+      - run: docker ps -a 
+      - run: curl --retry 5 --retry-delay 5 -v http://localhost:1313 
+      - run: docker logs hugotest 
+      - run: if [ "$(ls -A ./public)" ]; then echo "generated public dir"; else exit 5; fi 
+      - run: cat $(pwd)/public/index.html 
+      - run: docker stop hugotest 
+      - run: mv ./public/ ./old-public 
+
